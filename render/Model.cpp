@@ -9,12 +9,11 @@
 namespace lm {
 
     /**
-     * Constructor for the lmModel class.
-     *
+     * Constructor for the lmModel class.     
      * @param device The Vulkan device used for creating the model.
      * @param data The model data containing vertices and indices.
      */
-    lmModel::lmModel(lmDevice& device, const lmModel::Data& data) : deviceInstance{ device } {
+    lmModel::lmModel(lmDevice& device, const lmModel::Data& data) : device{ device } {
         createAttributeBuffers(data.vertices);
         createIndexBuffer(data.indices);
     }
@@ -25,8 +24,7 @@ namespace lm {
     lmModel::~lmModel() {}
 
     /**
-     * Create vertex attribute buffers for the model.
-     *
+     * Create vertex attribute buffers for the model.     
      * @param vertices The vector containing the vertex data.
      */
     void lmModel::createAttributeBuffers(const std::vector<Vertex>& vertices) {
@@ -50,7 +48,7 @@ namespace lm {
 
         // Create a single staging buffer for transferring data to GPU
         lmBuffer stagingBuffer{
-            deviceInstance,
+            device,
             bufferSize,
             vertexCount,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -60,48 +58,47 @@ namespace lm {
 
         // Position Buffer
         positionBuffer = std::make_unique<lmBuffer>(
-            deviceInstance,
+            device,
             bufferSize,
             vertexCount,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         stagingBuffer.writeToBuffer(positions.data(), bufferSize);
-        deviceInstance.copyBuffer(stagingBuffer.getBuffer(), positionBuffer->getBuffer(), bufferSize);
+        device.copyBuffer(stagingBuffer.getBuffer(), positionBuffer->getBuffer(), bufferSize);
 
         // Color Buffer
         colorBuffer = std::make_unique<lmBuffer>(
-            deviceInstance,
+            device,
             bufferSize,
             vertexCount,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         stagingBuffer.writeToBuffer(colors.data(), bufferSize);
-        deviceInstance.copyBuffer(stagingBuffer.getBuffer(), colorBuffer->getBuffer(), bufferSize);
+        device.copyBuffer(stagingBuffer.getBuffer(), colorBuffer->getBuffer(), bufferSize);
 
         // Normal Buffer
         normalBuffer = std::make_unique<lmBuffer>(
-            deviceInstance,
+            device,
             bufferSize,
             vertexCount,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         stagingBuffer.writeToBuffer(normals.data(), bufferSize);
-        deviceInstance.copyBuffer(stagingBuffer.getBuffer(), normalBuffer->getBuffer(), bufferSize);
+        device.copyBuffer(stagingBuffer.getBuffer(), normalBuffer->getBuffer(), bufferSize);
 
         // UV Buffer
         uvBuffer = std::make_unique<lmBuffer>(
-            deviceInstance,
+            device,
             sizeof(glm::vec2) * vertexCount,
             vertexCount,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         stagingBuffer.writeToBuffer(uvs.data(), sizeof(glm::vec2) * vertexCount);
-        deviceInstance.copyBuffer(stagingBuffer.getBuffer(), uvBuffer->getBuffer(), sizeof(glm::vec2) * vertexCount);
+        device.copyBuffer(stagingBuffer.getBuffer(), uvBuffer->getBuffer(), sizeof(glm::vec2) * vertexCount);
     }
 
     /**
-     * Create the index buffer for the model.
-     *
+     * Create the index buffer for the model.     
      * @param indices The vector containing the index data.
      */
     void lmModel::createIndexBuffer(const std::vector<uint32_t>& indices) {
@@ -117,7 +114,7 @@ namespace lm {
 
         // Create a staging buffer for transferring index data to GPU
         lmBuffer indexStagingBuffer{
-            deviceInstance,
+            device,
             indexBufferSize,
             indexCount,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -128,19 +125,18 @@ namespace lm {
 
         // Create the index buffer on the GPU
         indexBuffer = std::make_unique<lmBuffer>(
-            deviceInstance,
+            device,
             indexBufferSize,
             indexCount,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         // Copy index data to the GPU index buffer
-        deviceInstance.copyBuffer(indexStagingBuffer.getBuffer(), indexBuffer->getBuffer(), indexBufferSize);
+        device.copyBuffer(indexStagingBuffer.getBuffer(), indexBuffer->getBuffer(), indexBufferSize);
     }
 
     /**
-     * Draw the model using the given command buffer.
-     *
+     * Draw the model using the given command buffer.     
      * @param commandBuffer The Vulkan command buffer used for drawing.
      */
     void lmModel::draw(VkCommandBuffer commandBuffer) {
@@ -153,8 +149,7 @@ namespace lm {
     }
 
     /**
-     * Bind the model's attribute buffers and index buffer to the given command buffer.
-     *
+     * Bind the model's attribute buffers and index buffer to the given command buffer.     
      * @param commandBuffer The Vulkan command buffer used for binding.
      */
     void lmModel::bind(VkCommandBuffer commandBuffer) {
@@ -186,8 +181,7 @@ namespace lm {
     }
 
     /**
-     * Get the vertex binding descriptions for the model.
-     *
+     * Get the vertex binding descriptions for the model.     
      * @return A vector of VkVertexInputBindingDescription for the model's vertex attributes.
      */
     std::vector<VkVertexInputBindingDescription> lmModel::getBindingDescriptions() {
@@ -213,8 +207,7 @@ namespace lm {
     }
 
     /**
-     * Get the vertex attribute descriptions for the model.
-     *
+     * Get the vertex attribute descriptions for the model.     
      * @return A vector of VkVertexInputAttributeDescription for the model's vertex attributes.
      */
     std::vector<VkVertexInputAttributeDescription> lmModel::getAttributeDescriptions() {

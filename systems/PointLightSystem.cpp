@@ -8,7 +8,6 @@
 #include <array>
 #include <memory>
 #include <map>
-#include <stdexcept>
 
 namespace lm {
 
@@ -19,15 +18,15 @@ namespace lm {
 	};
 
 	PointLightSystem::PointLightSystem(
-		lm::lmDevice& deviceInstance,
+		lmDevice& device,
 		VkRenderPass renderPass,
-		VkDescriptorSetLayout globalSetLayout) : deviceInstance{ deviceInstance } {
+		VkDescriptorSetLayout globalSetLayout) : device{ device } {
 		createPipelineLayout(globalSetLayout);
 		createPipeline(renderPass);
 	}
 
 	PointLightSystem::~PointLightSystem() {
-		vkDestroyPipelineLayout(deviceInstance.getDevice(), pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);
 	}
 
 	void PointLightSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
@@ -46,8 +45,8 @@ namespace lm {
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-		if (vkCreatePipelineLayout(deviceInstance.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create pipeline layout");
+		if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+			LOG_FATAL("Failed to create pipeline layout");
 		}		
 	}
 
@@ -65,7 +64,7 @@ namespace lm {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 
 		pipeline = std::make_unique<lmPipeline>(
-			deviceInstance,
+			device,
 			"shaders/point_light.vert.spv",
 			"shaders/point_light.frag.spv",
 			pipelineConfig);		
@@ -99,17 +98,17 @@ namespace lm {
 	}
 
 	void PointLightSystem::render(FrameInfo& frameInfo) {
-		// Sort lights
-		std::map<float, lmGameObject::id_type> sorted;
-		for (auto& kv : frameInfo.gameObjects) {
-			auto& obj = kv.second;
-			if (obj.pointLight == nullptr) continue;
+			// Sort lights
+			std::map<float, lmGameObject::id_type> sorted;
+			for (auto& kv : frameInfo.gameObjects) {
+				auto& obj = kv.second;
+				if (obj.pointLight == nullptr) continue;
 
-			// Calculate distance
-			auto offset = frameInfo.camera.getPosition() - obj.transform.translation;
-			float distSquared = glm::dot(offset, offset);
-			sorted[distSquared] = obj.getID();
-		}
+				// Calculate distance
+				auto offset = frameInfo.camera.getPosition() - obj.transform.translation;
+				float distSquared = glm::dot(offset, offset);
+				sorted[distSquared] = obj.getID();
+			}
 
 		pipeline->bind(frameInfo.commandBuffer);
 

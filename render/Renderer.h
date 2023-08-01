@@ -45,7 +45,7 @@ namespace lm {
 		void recreateSwapChain();
 
 		lmWindow& window;
-		lmDevice& deviceInstance;
+		lmDevice& device;
 		std::unique_ptr<lmSwapChain> lmSwapChain;
 		std::vector<VkCommandBuffer> commandBuffers;
 

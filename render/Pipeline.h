@@ -58,7 +58,7 @@ namespace lm {
 
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
-		lmDevice& deviceInstance;
+		lmDevice& device;
 
 		VkPipeline graphicsPipeline;
 		VkShaderModule vertShaderModule;

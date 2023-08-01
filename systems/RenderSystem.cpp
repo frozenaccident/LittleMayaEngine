@@ -6,7 +6,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
-#include <stdexcept>
 #include <memory>
 #include <array>
 
@@ -18,15 +17,15 @@ namespace lm {
 	};
 
 	RenderSystem::RenderSystem(
-		lmDevice& deviceInstance,
+		lmDevice& device,
 		VkRenderPass renderPass,
-		VkDescriptorSetLayout globalSetLayout) : deviceInstance{ deviceInstance } {
+		VkDescriptorSetLayout globalSetLayout) : device{ device } {
 			createPipelineLayout(globalSetLayout);
 			createPipeline(renderPass);
 	}
 
 	RenderSystem::~RenderSystem() {
-		vkDestroyPipelineLayout(deviceInstance.getDevice(), pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);
 	}
 
 	void RenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
@@ -45,8 +44,8 @@ namespace lm {
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-		if (vkCreatePipelineLayout(deviceInstance.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create pipeline layout");
+		if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+			LOG_FATAL("Failed to create pipeline layout");
 		}
 
 		LOG_INFO("Pipeline layout created successfully");
@@ -62,7 +61,7 @@ namespace lm {
 		pipelineConfig.pipelineLayout = pipelineLayout;
 
 		pipeline = std::make_unique<lmPipeline>(
-			deviceInstance,
+			device,
 			"shaders/shader.vert.spv",
 			"shaders/shader.frag.spv",
 			pipelineConfig);

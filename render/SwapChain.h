@@ -72,7 +72,7 @@ namespace lm {
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
 
-        lmDevice& deviceInstance;
+        lmDevice& device;
         VkExtent2D windowExtent;
 
         VkSwapchainKHR swapChain;

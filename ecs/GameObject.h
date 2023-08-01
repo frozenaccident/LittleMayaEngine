@@ -72,7 +72,6 @@ namespace lm {
 
     private:
         lmGameObject(id_type objectID);
-
         id_type id;
     };
 

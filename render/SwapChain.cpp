@@ -7,17 +7,16 @@
 #include <iostream>
 #include <limits>
 #include <set>
-#include <stdexcept>
 
 namespace lm {
 
     lmSwapChain::lmSwapChain(lmDevice& device, VkExtent2D extent)
-        : deviceInstance{ device }, windowExtent{ extent } {
+        : device{ device }, windowExtent{ extent } {
         init();
     }
 
     lmSwapChain::lmSwapChain(lmDevice& device, VkExtent2D extent, std::shared_ptr<lmSwapChain> previous)
-        : deviceInstance{ device }, windowExtent{ extent }, oldSwapChain{ previous } {
+        : device{ device }, windowExtent{ extent }, oldSwapChain{ previous } {
         init();
 
         oldSwapChain = nullptr;
@@ -34,45 +33,45 @@ namespace lm {
 
     lmSwapChain::~lmSwapChain() {
         for (auto imageView : swapChainImageViews) {
-            vkDestroyImageView(deviceInstance.getDevice(), imageView, nullptr);
+            vkDestroyImageView(device.getDevice(), imageView, nullptr);
         }
         swapChainImageViews.clear();
 
         if (swapChain != nullptr) {
-            vkDestroySwapchainKHR(deviceInstance.getDevice(), swapChain, nullptr);
+            vkDestroySwapchainKHR(device.getDevice(), swapChain, nullptr);
             swapChain = nullptr;
         }
 
         for (int i = 0; i < depthImages.size(); i++) {
-            vkDestroyImageView(deviceInstance.getDevice(), depthImageViews[i], nullptr);
-            vkDestroyImage(deviceInstance.getDevice(), depthImages[i], nullptr);
-            vkFreeMemory(deviceInstance.getDevice(), depthImageMemorys[i], nullptr);
+            vkDestroyImageView(device.getDevice(), depthImageViews[i], nullptr);
+            vkDestroyImage(device.getDevice(), depthImages[i], nullptr);
+            vkFreeMemory(device.getDevice(), depthImageMemorys[i], nullptr);
         }
 
         for (auto framebuffer : swapChainFramebuffers) {
-            vkDestroyFramebuffer(deviceInstance.getDevice(), framebuffer, nullptr);
+            vkDestroyFramebuffer(device.getDevice(), framebuffer, nullptr);
         }
 
-        vkDestroyRenderPass(deviceInstance.getDevice(), renderPass, nullptr);
+        vkDestroyRenderPass(device.getDevice(), renderPass, nullptr);
 
         // Cleanup synchronization objects
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            vkDestroySemaphore(deviceInstance.getDevice(), renderFinishedSemaphores[i], nullptr);
-            vkDestroySemaphore(deviceInstance.getDevice(), imageAvailableSemaphores[i], nullptr);
-            vkDestroyFence(deviceInstance.getDevice(), inFlightFences[i], nullptr);
+            vkDestroySemaphore(device.getDevice(), renderFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(device.getDevice(), imageAvailableSemaphores[i], nullptr);
+            vkDestroyFence(device.getDevice(), inFlightFences[i], nullptr);
         }
     }
 
     VkResult lmSwapChain::acquireNextImage(uint32_t* imageIndex) {
         vkWaitForFences(
-            deviceInstance.getDevice(),
+            device.getDevice(),
             1,
             &inFlightFences[currentFrame],
             VK_TRUE,
             std::numeric_limits<uint64_t>::max());
 
         VkResult result = vkAcquireNextImageKHR(
-            deviceInstance.getDevice(),
+            device.getDevice(),
             swapChain,
             std::numeric_limits<uint64_t>::max(),
             imageAvailableSemaphores[currentFrame],  // must be a not signaled semaphore
@@ -84,57 +83,56 @@ namespace lm {
 
     VkResult lmSwapChain::submitCommandBuffers(
         const VkCommandBuffer* buffers, uint32_t* imageIndex) {
-        if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
-            vkWaitForFences(deviceInstance.getDevice(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
-        }
+            if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
+                vkWaitForFences(device.getDevice(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
+            }
 
-        imagesInFlight[*imageIndex] = inFlightFences[currentFrame];
+            imagesInFlight[*imageIndex] = inFlightFences[currentFrame];
 
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            VkSubmitInfo submitInfo = {};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
+            VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+            VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = waitSemaphores;
+            submitInfo.pWaitDstStageMask = waitStages;
 
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = buffers;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = buffers;
 
-        VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+            VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = signalSemaphores;
 
-        vkResetFences(deviceInstance.getDevice(), 1, &inFlightFences[currentFrame]);
-        if (vkQueueSubmit(deviceInstance.getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to submit draw command buffer!");
-        }
+            vkResetFences(device.getDevice(), 1, &inFlightFences[currentFrame]);
+            if (vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) !=
+                VK_SUCCESS) {
+                LOG_ERROR("Failed to submit draw command buffer!");
+            }
 
-        VkPresentInfoKHR presentInfo = {};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            VkPresentInfoKHR presentInfo = {};
+            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+            presentInfo.waitSemaphoreCount = 1;
+            presentInfo.pWaitSemaphores = signalSemaphores;
 
-        VkSwapchainKHR swapChains[] = { swapChain };
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapChains;
+            VkSwapchainKHR swapChains[] = { swapChain };
+            presentInfo.swapchainCount = 1;
+            presentInfo.pSwapchains = swapChains;
 
-        presentInfo.pImageIndices = imageIndex;
+            presentInfo.pImageIndices = imageIndex;
 
-        auto result = vkQueuePresentKHR(deviceInstance.getPresentQueue(), &presentInfo);
+            auto result = vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
 
-        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-        return result;
+            currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+            return result;
     }
 
     void lmSwapChain::createSwapChain() {
         LOG_INFO("Creating swapchain...");
 
-        SwapChainSupportDetails swapChainSupport = deviceInstance.getSwapChainSupport();
+        SwapChainSupportDetails swapChainSupport = device.getSwapChainSupport();
 
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -148,7 +146,7 @@ namespace lm {
 
         VkSwapchainCreateInfoKHR createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = deviceInstance.getSurface();
+        createInfo.surface = device.getSurface();
 
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = surfaceFormat.format;
@@ -157,7 +155,7 @@ namespace lm {
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = deviceInstance.findPhysicalQueueFamilies();
+        QueueFamilyIndices indices = device.findPhysicalQueueFamilies();
         uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
 
         if (indices.graphicsFamily != indices.presentFamily) {
@@ -179,8 +177,8 @@ namespace lm {
 
         createInfo.oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapChain;
 
-        if (vkCreateSwapchainKHR(deviceInstance.getDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create swapchain!");
+        if (vkCreateSwapchainKHR(device.getDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+            LOG_FATAL("Failed to create swapchain!");
         }
 
         LOG_INFO("Swapchain successfully created");
@@ -189,9 +187,9 @@ namespace lm {
         // allowed to create a swap chain with more. That's why we'll first query the final number of
         // images with vkGetSwapchainImagesKHR, then resize the container and finally call it again to
         // retrieve the handles.
-        vkGetSwapchainImagesKHR(deviceInstance.getDevice(), swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(device.getDevice(), swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(deviceInstance.getDevice(), swapChain, &imageCount, swapChainImages.data());
+        vkGetSwapchainImagesKHR(device.getDevice(), swapChain, &imageCount, swapChainImages.data());
 
         swapChainImageFormat = surfaceFormat.format;
         swapChainExtent = extent;
@@ -199,6 +197,7 @@ namespace lm {
 
     void lmSwapChain::createImageViews() {
         swapChainImageViews.resize(swapChainImages.size());
+
         for (size_t i = 0; i < swapChainImages.size(); i++) {
             VkImageViewCreateInfo viewInfo{};
             viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -211,9 +210,9 @@ namespace lm {
             viewInfo.subresourceRange.baseArrayLayer = 0;
             viewInfo.subresourceRange.layerCount = 1;
 
-            if (vkCreateImageView(deviceInstance.getDevice(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
+            if (vkCreateImageView(device.getDevice(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
                 VK_SUCCESS) {
-                throw std::runtime_error("Failed to create texture image view!");
+                    LOG_ERROR("Failed to create texture image view!");
             }
         }
     }
@@ -274,8 +273,8 @@ namespace lm {
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(deviceInstance.getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create renderpass!");
+        if (vkCreateRenderPass(device.getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+            LOG_FATAL("Failed to create renderpass!");
         }
 
         LOG_INFO("Renderpass created successfully");
@@ -297,11 +296,11 @@ namespace lm {
             framebufferInfo.layers = 1;
 
             if (vkCreateFramebuffer(
-                deviceInstance.getDevice(),
+                device.getDevice(),
                 &framebufferInfo,
                 nullptr,
                 &swapChainFramebuffers[i]) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to create framebuffer!");
+                    LOG_ERROR("Failed to create framebuffer!");
             }
         }
 
@@ -334,7 +333,7 @@ namespace lm {
             imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             imageInfo.flags = 0;
 
-            deviceInstance.createImageWithInfo(
+            device.createImageWithInfo(
                 imageInfo,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 depthImages[i],
@@ -351,8 +350,8 @@ namespace lm {
             viewInfo.subresourceRange.baseArrayLayer = 0;
             viewInfo.subresourceRange.layerCount = 1;
 
-            if (vkCreateImageView(deviceInstance.getDevice(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to create texture imageview!");
+            if (vkCreateImageView(device.getDevice(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
+                LOG_ERROR("Failed to create texture imageview!");
             }
         }
     }
@@ -371,26 +370,26 @@ namespace lm {
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            if (vkCreateSemaphore(deviceInstance.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
+            if (vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
                 VK_SUCCESS ||
-                vkCreateSemaphore(deviceInstance.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
+                vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
                 VK_SUCCESS ||
-                vkCreateFence(deviceInstance.getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to create synchronization objects for a frame!");
+                vkCreateFence(device.getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+                    LOG_ERROR("Failed to create synchronization objects for a frame!");
             }
         }
     }
 
     VkSurfaceFormatKHR lmSwapChain::chooseSwapSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& availableFormats) {
-        for (const auto& availableFormat : availableFormats) {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-                availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                return availableFormat;
+            for (const auto& availableFormat : availableFormats) {
+                if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+                    availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    return availableFormat;
+                }
             }
-        }
 
-        return availableFormats[0];
+            return availableFormats[0];
     }
     /*
     VkPresentModeKHR lmSwapChain::chooseSwapPresentMode(
@@ -427,38 +426,38 @@ namespace lm {
         return bestMode;
     }
     */
+
     VkPresentModeKHR lmSwapChain::chooseSwapPresentMode(
         const std::vector<VkPresentModeKHR>& availablePresentModes) {
+            VkPresentModeKHR bestMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // no sync
 
-        VkPresentModeKHR bestMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // no sync
+            for (const auto& availablePresentMode : availablePresentModes) {
+                if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) { // still prioritizing Mailbox if available
+                    bestMode = availablePresentMode;
+                    break;
+                }
+                else if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) { // check for FIFO, just in case Immediate isn't supported
+                    bestMode = availablePresentMode;
+                }
+            }
 
-        for (const auto& availablePresentMode : availablePresentModes) {
-            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) { // still prioritizing Mailbox if available
-                bestMode = availablePresentMode;
+            // Move the logging here so that we log the mode that is actually chosen
+            switch (bestMode) {
+            case VK_PRESENT_MODE_IMMEDIATE_KHR:
+                LOG_INFO("Present mode: Immediate");
+                break;
+            case VK_PRESENT_MODE_MAILBOX_KHR:
+                LOG_INFO("Present mode: Mailbox");
+                break;
+            case VK_PRESENT_MODE_FIFO_KHR:
+                LOG_INFO("Present mode: V-Sync");
+                break;
+            default:
+                LOG_WARN("Unexpected present mode selected");
                 break;
             }
-            else if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) { // check for FIFO, just in case Immediate isn't supported
-                bestMode = availablePresentMode;
-            }
-        }
 
-        // Move the logging here so that we log the mode that is actually chosen
-        switch (bestMode) {
-        case VK_PRESENT_MODE_IMMEDIATE_KHR:
-            LOG_INFO("Present mode: Immediate");
-            break;
-        case VK_PRESENT_MODE_MAILBOX_KHR:
-            LOG_INFO("Present mode: Mailbox");
-            break;
-        case VK_PRESENT_MODE_FIFO_KHR:
-            LOG_INFO("Present mode: V-Sync");
-            break;
-        default:
-            LOG_WARN("Unexpected present mode selected");
-            break;
-        }
-
-        return bestMode;
+            return bestMode;
     }
        
 
@@ -480,7 +479,7 @@ namespace lm {
     }
 
     VkFormat lmSwapChain::findDepthFormat() {
-        return deviceInstance.findSupportedFormat(
+        return device.findSupportedFormat(
             { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);

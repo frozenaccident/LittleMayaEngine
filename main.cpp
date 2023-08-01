@@ -5,7 +5,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <stdexcept>
 
 int main()
 {
@@ -14,7 +13,7 @@ int main()
     try {
 
         if (!glfwInit()) {
-            LOG_ERROR("Failed to initialize GLFW");
+            LOG_FATAL("Failed to initialize GLFW");
             return EXIT_FAILURE;
         }
 

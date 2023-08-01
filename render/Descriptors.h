@@ -73,7 +73,6 @@ namespace lm {
             const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet& descriptor) const;
 
         void freeDescriptors(std::vector<VkDescriptorSet>& descriptors) const;
-
         void resetPool();
 
     private:

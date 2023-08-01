@@ -14,9 +14,9 @@ namespace lm {
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData) {
-        std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
+            std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
 
-        return VK_FALSE;
+            return VK_FALSE;
     }
 
     VkResult CreateDebugUtilsMessengerEXT(
@@ -24,27 +24,29 @@ namespace lm {
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
         VkDebugUtilsMessengerEXT* pDebugMessenger) {
-        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-            instance,
-            "vkCreateDebugUtilsMessengerEXT");
-        if (func != nullptr) {
-            return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-        }
-        else {
-            return VK_ERROR_EXTENSION_NOT_PRESENT;
-        }
+            auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+                instance,
+                "vkCreateDebugUtilsMessengerEXT");
+
+            if (func != nullptr) {
+                return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+            }
+            else {
+                return VK_ERROR_EXTENSION_NOT_PRESENT;
+            }
     }
 
     void DestroyDebugUtilsMessengerEXT(
         VkInstance instance,
         VkDebugUtilsMessengerEXT debugMessenger,
         const VkAllocationCallbacks* pAllocator) {
-        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-            instance,
-            "vkDestroyDebugUtilsMessengerEXT");
-        if (func != nullptr) {
-            func(instance, debugMessenger, pAllocator);
-        }
+            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+                instance,
+                "vkDestroyDebugUtilsMessengerEXT");
+
+            if (func != nullptr) {
+                func(instance, debugMessenger, pAllocator);
+            }
     }
 
     // Class member functions
@@ -71,16 +73,16 @@ namespace lm {
 
     void lmDevice::createInstance() {
         if (enableValidationLayers && !checkValidationLayerSupport()) {
-            throw std::runtime_error("Validation layers requested, but not available!");
+            LOG_ERROR("Validation layers requested, but not available!");
         }
 
         VkApplicationInfo appInfo = {};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Little Maya Engine";
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.applicationVersion = VK_MAKE_VERSION(0, 38, 10);
         appInfo.pEngineName = "Little Maya Engine";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        appInfo.engineVersion = VK_MAKE_VERSION(0, 38, 10);
+        appInfo.apiVersion = VK_API_VERSION_1_3;
 
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -104,7 +106,7 @@ namespace lm {
         }
 
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create instance!");
+            LOG_FATAL("Failed to create instance!");
         }
 
         hasGflwRequiredInstanceExtensions();
@@ -115,8 +117,9 @@ namespace lm {
     void lmDevice::pickPhysicalDevice() {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
         if (deviceCount == 0) {
-            throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+            LOG_ERROR("Failed to find GPUs with Vulkan support!");
         }
 
         LOG_INFO("Device count: {}", deviceCount);
@@ -132,7 +135,7 @@ namespace lm {
         }
 
         if (physicalDevice == VK_NULL_HANDLE) {
-            throw std::runtime_error("Failed to find a suitable GPU!");
+            LOG_ERROR("Failed to find a suitable GPU!");
         }
 
         vkGetPhysicalDeviceProperties(physicalDevice, &properties);
@@ -146,6 +149,7 @@ namespace lm {
         std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
 
         float queuePriority = 1.0f;
+
         for (uint32_t queueFamily : uniqueQueueFamilies) {
             VkDeviceQueueCreateInfo queueCreateInfo = {};
             queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -179,7 +183,7 @@ namespace lm {
         }
 
         if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create logical device!");
+            LOG_ERROR("Failed to create logical device!");
         }
 
         vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
@@ -198,19 +202,15 @@ namespace lm {
             VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create command pool!");
+            LOG_ERROR("Failed to create command pool!");
         }
     }
 
     void lmDevice::createSurface() {
-        window.createWindowSurface(instance, &surface);
-
-        LOG_INFO("Window surface created");
+        window.createWindowSurface(instance, &surface);        
     }
 
     bool lmDevice::isDeviceSuitable(VkPhysicalDevice device) {
-        LOG_INFO("Checking if device is suitable");
-
         QueueFamilyIndices indices = findQueueFamilies(device);
 
         bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -253,11 +253,10 @@ namespace lm {
         if (!enableValidationLayers) return;
         VkDebugUtilsMessengerCreateInfoEXT createInfo;
         populateDebugMessengerCreateInfo(createInfo);
-        if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to set up debug messenger!");
-        }
 
-        LOG_INFO("Debug messenger set up");
+        if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+            LOG_ERROR("Failed to set up debug messenger!");
+        }        
     }
 
     bool lmDevice::checkValidationLayerSupport() {
@@ -321,7 +320,7 @@ namespace lm {
         for (const auto& required : requiredExtensions) {
             LOG_INFO("\t" + std::string(required));
             if (available.find(required) == available.end()) {
-                throw std::runtime_error("Missing required glfw extension");
+                LOG_ERROR("Missing required glfw extension");
             }
         }
     }
@@ -404,6 +403,7 @@ namespace lm {
                 &presentModeCount,
                 details.presentModes.data());
         }
+
         return details;
     }
 
@@ -430,7 +430,7 @@ namespace lm {
             return supportedFormat;
         }
         else {
-            throw std::runtime_error("Failed to find supported format!");
+            LOG_ERROR("Failed to find supported format!");
         }
     }
 
@@ -445,7 +445,7 @@ namespace lm {
             }
         }
 
-        throw std::runtime_error("Failed to find suitable memory type!");
+        LOG_ERROR("Failed to find suitable memory type!");
     }
 
     // @TODO: Needs to be rewritten once Vulkan Memory Allocator is used in the project
@@ -462,7 +462,7 @@ namespace lm {
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create vertex buffer!");
+            LOG_ERROR("Failed to create vertex buffer!");
         }
 
         VkMemoryRequirements memRequirements;
@@ -474,7 +474,7 @@ namespace lm {
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to allocate vertex buffer memory!");
+            LOG_ERROR("Failed to allocate vertex buffer memory!");
         }
 
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
@@ -582,7 +582,7 @@ namespace lm {
         VkDeviceMemory& imageMemory) {
 
         if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create image!");
+            LOG_ERROR("Failed to create image!");
         }
 
         VkMemoryRequirements memRequirements;
@@ -594,11 +594,11 @@ namespace lm {
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to allocate image memory!");
+            LOG_ERROR("Failed to allocate image memory!");
         }
 
         if (vkBindImageMemory(device, image, imageMemory, 0) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to bind image memory!");
+            LOG_ERROR("Failed to bind image memory!");
         }
     }
 

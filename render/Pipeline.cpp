@@ -8,7 +8,6 @@
 #include "Model.h"
 
 #include <fstream>
-#include <stdexcept>
 #include <cassert>
 
 namespace lm {
@@ -22,8 +21,8 @@ namespace lm {
      * @param configInfo The PipelineConfigInfo struct containing configuration information for the pipeline.
      */
     lmPipeline::lmPipeline(lmDevice& device, const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo)
-        : deviceInstance{ device } {
-        createGraphicsPipeline(vertFilePath, fragFilePath, configInfo);
+        : device{ device } {
+            createGraphicsPipeline(vertFilePath, fragFilePath, configInfo);
     }
 
     /**
@@ -31,9 +30,9 @@ namespace lm {
      *        This will also destroy the associated shader modules and graphics pipeline.
      */
     lmPipeline::~lmPipeline() {
-        vkDestroyShaderModule(deviceInstance.getDevice(), vertShaderModule, nullptr);
-        vkDestroyShaderModule(deviceInstance.getDevice(), fragShaderModule, nullptr);
-        vkDestroyPipeline(deviceInstance.getDevice(), graphicsPipeline, nullptr);
+        vkDestroyShaderModule(device.getDevice(), vertShaderModule, nullptr);
+        vkDestroyShaderModule(device.getDevice(), fragShaderModule, nullptr);
+        vkDestroyPipeline(device.getDevice(), graphicsPipeline, nullptr);
     }
 
     /**
@@ -47,7 +46,7 @@ namespace lm {
         std::ifstream file{ filePath, std::ios::ate | std::ios::binary };
 
         if (!file.is_open()) {
-            throw std::runtime_error("Failed to open file: " + filePath);
+            LOG_ERROR("Failed to open file: " + filePath);
         }
 
         size_t fileSize = static_cast<size_t>(file.tellg());
@@ -125,8 +124,8 @@ namespace lm {
         pipelineInfo.basePipelineIndex = -1;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(deviceInstance.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create graphics pipeline");
+        if (vkCreateGraphicsPipelines(device.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+            LOG_FATAL("Failed to create graphics pipeline");
         }
     }
 
@@ -143,14 +142,13 @@ namespace lm {
         createInfo.codeSize = code.size();
         createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-        if (vkCreateShaderModule(deviceInstance.getDevice(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create shader module");
+        if (vkCreateShaderModule(device.getDevice(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
+            LOG_ERROR("Failed to create shader module");
         }
     }
 
     /**
-     * @brief Bind the graphics pipeline to the specified command buffer.
-     *
+     * @brief Bind the graphics pipeline to the specified command buffer.     
      * @param commandBuffer The command buffer to bind the pipeline to.
      */
     void lmPipeline::bind(VkCommandBuffer commandBuffer) {
@@ -159,8 +157,7 @@ namespace lm {
 
     /**
      * @brief Set default configuration for the pipeline.
-     *        The provided PipelineConfigInfo struct will be populated with default values.
-     *
+     *The provided PipelineConfigInfo struct will be populated with default values.     
      * @param configInfo The PipelineConfigInfo struct to be populated with default configuration.
      */
     void lmPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
@@ -238,8 +235,7 @@ namespace lm {
 
     /**
      * @brief Enable alpha blending in the pipeline configuration.
-     *        The provided PipelineConfigInfo struct will be modified to enable alpha blending.
-     *
+     * The provided PipelineConfigInfo struct will be modified to enable alpha blending.     
      * @param configInfo The PipelineConfigInfo struct to be modified for enabling alpha blending.
      */
     void lmPipeline::enableAlphaBlending(PipelineConfigInfo& configInfo) {

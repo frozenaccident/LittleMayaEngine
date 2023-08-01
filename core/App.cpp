@@ -17,11 +17,6 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
-#include <stdexcept>
 #include <memory>
 #include <array>
 #include <functional>

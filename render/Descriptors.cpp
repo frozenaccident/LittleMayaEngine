@@ -1,7 +1,6 @@
 #include "Descriptors.h"
 
 #include <cassert>
-#include <stdexcept>
 
 namespace lm {
 
@@ -47,23 +46,23 @@ namespace lm {
     lmDescriptorSetLayout::lmDescriptorSetLayout(
         lmDevice& device, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings)
         : device{ device }, bindings{ bindings }, descriptorSetLayout{ VK_NULL_HANDLE } {
-        std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings{};
-        for (const auto& [key, value] : bindings) {
-            setLayoutBindings.push_back(value);
-        }
+            std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings{};
+            for (const auto& [key, value] : bindings) {
+                setLayoutBindings.push_back(value);
+            }
 
-        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
-        descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
-        descriptorSetLayoutInfo.pBindings = setLayoutBindings.data();
+            VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
+            descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
+            descriptorSetLayoutInfo.pBindings = setLayoutBindings.data();
 
-        if (vkCreateDescriptorSetLayout(
-            device.getDevice(),
-            &descriptorSetLayoutInfo,
-            nullptr,
-            &descriptorSetLayout) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create descriptor set layout!");
-        }
+            if (vkCreateDescriptorSetLayout(
+                device.getDevice(),
+                &descriptorSetLayoutInfo,
+                nullptr,
+                &descriptorSetLayout) != VK_SUCCESS) {
+                    LOG_FATAL("Failed to create descriptor set layout!");
+            }
     }
 
     // Destructor for lmDescriptorSetLayout.
@@ -77,6 +76,7 @@ namespace lm {
     lmDescriptorPool::Builder& lmDescriptorPool::Builder::addPoolSize(
         VkDescriptorType descriptorType, uint32_t count) {
         poolSizes.push_back({ descriptorType, count });
+
         return *this;
     }
 
@@ -106,17 +106,20 @@ namespace lm {
         VkDescriptorPoolCreateFlags poolFlags,
         const std::vector<VkDescriptorPoolSize>& poolSizes)
         : device{ device } {
-        VkDescriptorPoolCreateInfo descriptorPoolInfo{};
-        descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        descriptorPoolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-        descriptorPoolInfo.pPoolSizes = poolSizes.data();
-        descriptorPoolInfo.maxSets = maxSets;
-        descriptorPoolInfo.flags = poolFlags;
+            VkDescriptorPoolCreateInfo descriptorPoolInfo{};
+            descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            descriptorPoolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+            descriptorPoolInfo.pPoolSizes = poolSizes.data();
+            descriptorPoolInfo.maxSets = maxSets;
+            descriptorPoolInfo.flags = poolFlags;
 
-        if (vkCreateDescriptorPool(device.getDevice(), &descriptorPoolInfo, nullptr, &descriptorPool) !=
-            VK_SUCCESS) {
-            throw std::runtime_error("Failed to create descriptor pool!");
-        }
+            if (vkCreateDescriptorPool(
+                device.getDevice(),
+                &descriptorPoolInfo,
+                nullptr,
+                &descriptorPool) != VK_SUCCESS) {
+                    LOG_FATAL("Failed to create descriptor pool!");
+            }
     }
 
     // Destructor for lmDescriptorPool.
@@ -135,9 +138,13 @@ namespace lm {
 
         // Might want to create a "DescriptorPoolManager" class that handles this case, and builds
         // a new pool whenever an old pool fills up. But this is beyond our current scope
-        if (vkAllocateDescriptorSets(device.getDevice(), &allocInfo, &descriptor) != VK_SUCCESS) {
-            return false;
+        if (vkAllocateDescriptorSets(
+            device.getDevice(),
+            &allocInfo,
+            &descriptor) != VK_SUCCESS) {
+                return false;
         }
+
         return true;
     }
 
@@ -208,9 +215,11 @@ namespace lm {
     // Build a new descriptor set and allocate it from the descriptor pool.
     bool lmDescriptorWriter::build(VkDescriptorSet& set) {
         bool success = pool.allocateDescriptor(setLayout.getDescriptorSetLayout(), set);
+
         if (!success) {
             return false;
         }
+
         overwrite(set);
         return true;
     }
@@ -220,7 +229,13 @@ namespace lm {
         for (auto& write : writes) {
             write.dstSet = set;
         }
-        vkUpdateDescriptorSets(pool.device.getDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+        vkUpdateDescriptorSets(
+            pool.device.getDevice(),
+            static_cast<uint32_t>(writes.size()),
+            writes.data(),
+            0,
+            nullptr);
     }
 
 }  // namespace lm

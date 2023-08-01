@@ -45,7 +45,7 @@ namespace lm {
         void createAttributeBuffers(const std::vector<Vertex>& vertices);
         void createIndexBuffer(const std::vector<uint32_t>& indices);
 
-        lmDevice& deviceInstance;
+        lmDevice& device;
         std::unique_ptr<lmBuffer> positionBuffer;
         std::unique_ptr<lmBuffer> colorBuffer;
         std::unique_ptr<lmBuffer> normalBuffer;

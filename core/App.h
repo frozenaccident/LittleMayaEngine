@@ -10,6 +10,7 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <memory>
 #include <vector>
@@ -46,8 +47,8 @@ namespace lm {
 
     class App {
     public:
-        static constexpr int WIDTH = 800;
-        static constexpr int HEIGHT = 600;
+        static constexpr int WIDTH = 1024;
+        static constexpr int HEIGHT = 768;
 
         App();
         ~App();
@@ -59,8 +60,18 @@ namespace lm {
 
     private:
         void loadGameObjects();
-        lmModel::Data processAiMesh(aiMesh* mesh, const aiScene* scene, const std::string& modelDirectory);
-        void processAiNode(aiNode* node, const aiScene* scene, const std::string& modelDirectory, const glm::vec3& scale, const glm::vec3& position);
+
+        lmModel::Data processAiMesh(
+			aiMesh* mesh,
+			const aiScene* scene,
+			const std::string& modelDirectory);
+
+        void processAiNode(
+			aiNode* node,
+			const aiScene* scene,
+			const std::string& modelDirectory,
+			const glm::vec3& scale,
+			const glm::vec3& position);
 
         lmWindow lmWindow{ WIDTH, HEIGHT, "Little Maya Engine" };
         lmDevice lmDevice{ lmWindow };

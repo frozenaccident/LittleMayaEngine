@@ -26,7 +26,7 @@ namespace lm {
 		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
-		lm::lmDevice& deviceInstance;
+		lmDevice& device;
 
 		std::unique_ptr<lmPipeline> pipeline;
 		VkPipelineLayout pipelineLayout;

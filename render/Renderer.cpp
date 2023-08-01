@@ -1,14 +1,13 @@
 #include "../render/Renderer.h"
 #include "../core/Logger.h"
 
-#include <stdexcept>
 #include <memory>
 #include <array>
 
 namespace lm {
 
 	// Constructor: Initializes the lmRenderer object with lmWindow and lmDevice references
-	lmRenderer::lmRenderer(lm::lmWindow& window, lm::lmDevice& device) : window{ window }, deviceInstance{ device } {
+	lmRenderer::lmRenderer(lm::lmWindow& window, lm::lmDevice& device) : window{ window }, device{ device } {
 		// Recreate the swap chain and create command buffers
 		recreateSwapChain();
 		createCommandBuffers();
@@ -31,22 +30,22 @@ namespace lm {
 		}
 
 		// Wait for the device to finish operations before continuing
-		vkDeviceWaitIdle(deviceInstance.getDevice());
+		vkDeviceWaitIdle(device.getDevice());
 
 		// Free old resources before creating new ones
 		freeCommandBuffers();
 
 		// Create or recreate the swap chain based on its current state
 		if (lmSwapChain == nullptr) {
-			lmSwapChain = std::make_unique<lm::lmSwapChain>(deviceInstance, extent);
+			lmSwapChain = std::make_unique<lm::lmSwapChain>(device, extent);
 		}
 		else {
 			std::shared_ptr<lm::lmSwapChain> oldSwapChain = std::move(lmSwapChain);
-			lmSwapChain = std::make_unique<lm::lmSwapChain>(deviceInstance, extent, oldSwapChain);
+			lmSwapChain = std::make_unique<lm::lmSwapChain>(device, extent, oldSwapChain);
 
 			// Compare the swap chain formats to ensure compatibility
 			if (!oldSwapChain->compareSwapFormats(*lmSwapChain.get())) {
-				throw std::runtime_error("Swap chain image or depth format has changed!");
+				LOG_ERROR("Swap chain image or depth format has changed!");
 			}
 		}
 
@@ -61,12 +60,12 @@ namespace lm {
 		VkCommandBufferAllocateInfo allocateInfo{};
 		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocateInfo.commandPool = deviceInstance.getCommandPool();
+		allocateInfo.commandPool = device.getCommandPool();
 		allocateInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
 		// Allocate the command buffers from the command pool
-		if (vkAllocateCommandBuffers(deviceInstance.getDevice(), &allocateInfo, commandBuffers.data()) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to allocate command buffers");
+		if (vkAllocateCommandBuffers(device.getDevice(), &allocateInfo, commandBuffers.data()) != VK_SUCCESS) {
+			LOG_FATAL("Failed to allocate command buffers");
 		}
 
 		// Log success message
@@ -77,8 +76,8 @@ namespace lm {
 	void lmRenderer::freeCommandBuffers() {
 		if (commandBuffers.size() > 0) {
 			vkFreeCommandBuffers(
-				deviceInstance.getDevice(),
-				deviceInstance.getCommandPool(),
+				device.getDevice(),
+				device.getCommandPool(),
 				static_cast<uint32_t>(commandBuffers.size()),
 				commandBuffers.data());
 
@@ -113,7 +112,7 @@ namespace lm {
 
 		// Begin recording the command buffer
 		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to begin recording command buffer");
+			LOG_ERROR("Failed to begin recording command buffer");
 		}
 
 		// Return the command buffer to the caller
@@ -127,7 +126,7 @@ namespace lm {
 
 		// End recording the command buffer
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to record command buffer");
+			LOG_ERROR("Failed to record command buffer");
 		}
 
 		// Submit the command buffer for rendering and presentation
@@ -140,7 +139,7 @@ namespace lm {
 		}
 		// If submitting the command buffer fails, throw a runtime error
 		else if (result != VK_SUCCESS) {
-			throw std::runtime_error("Failed to present swap chain image");
+			LOG_ERROR("Failed to present swap chain image");
 		}
 
 		isFrameStarted = false;

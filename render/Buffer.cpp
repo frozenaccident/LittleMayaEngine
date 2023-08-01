@@ -17,6 +17,7 @@ namespace lm {
         if (minOffsetAlignment > 0) {
             return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
         }
+
         return instanceSize;
     }
 
@@ -37,14 +38,14 @@ namespace lm {
         VkBufferUsageFlags usageFlags,
         VkMemoryPropertyFlags memoryPropertyFlags,
         VkDeviceSize minOffsetAlignment)
-        : deviceInstance{ device },
+        : device{ device },
         instanceSize{ instanceSize },
         instanceCount{ instanceCount },
         usageFlags{ usageFlags },
         memoryPropertyFlags{ memoryPropertyFlags } {
-        alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
-        bufferSize = alignmentSize * instanceCount;
-        device.createBuffer(bufferSize, usageFlags, memoryPropertyFlags, buffer, memory);
+            alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
+            bufferSize = alignmentSize * instanceCount;
+            device.createBuffer(bufferSize, usageFlags, memoryPropertyFlags, buffer, memory);
     }
 
     /**
@@ -52,8 +53,8 @@ namespace lm {
      */
     lmBuffer::~lmBuffer() {
         unmap();
-        vkDestroyBuffer(deviceInstance.getDevice(), buffer, nullptr);
-        vkFreeMemory(deviceInstance.getDevice(), memory, nullptr);
+        vkDestroyBuffer(device.getDevice(), buffer, nullptr);
+        vkFreeMemory(device.getDevice(), memory, nullptr);
     }
 
     /**
@@ -66,7 +67,7 @@ namespace lm {
      */
     VkResult lmBuffer::map(VkDeviceSize size, VkDeviceSize offset) {
         assert(buffer && memory && "Called map on buffer before create");
-        return vkMapMemory(deviceInstance.getDevice(), memory, offset, size, 0, &mapped);
+        return vkMapMemory(device.getDevice(), memory, offset, size, 0, &mapped);
     }
 
     /**
@@ -74,7 +75,7 @@ namespace lm {
      */
     void lmBuffer::unmap() {
         if (mapped) {
-            vkUnmapMemory(deviceInstance.getDevice(), memory);
+            vkUnmapMemory(device.getDevice(), memory);
             mapped = nullptr;
         }
     }
@@ -115,7 +116,7 @@ namespace lm {
         mappedRange.memory = memory;
         mappedRange.offset = offset;
         mappedRange.size = size;
-        return vkFlushMappedMemoryRanges(deviceInstance.getDevice(), 1, &mappedRange);
+        return vkFlushMappedMemoryRanges(device.getDevice(), 1, &mappedRange);
     }
 
     /**
@@ -134,7 +135,7 @@ namespace lm {
         mappedRange.memory = memory;
         mappedRange.offset = offset;
         mappedRange.size = size;
-        return vkInvalidateMappedMemoryRanges(deviceInstance.getDevice(), 1, &mappedRange);
+        return vkInvalidateMappedMemoryRanges(device.getDevice(), 1, &mappedRange);
     }
 
     /**

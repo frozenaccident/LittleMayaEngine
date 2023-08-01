@@ -12,7 +12,11 @@ namespace lm {
 
 	class RenderSystem {
 	public:
-		RenderSystem(lmDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
+		RenderSystem(
+			lmDevice& device,
+			VkRenderPass renderPass,
+			VkDescriptorSetLayout globalSetLayout);
+
 		~RenderSystem();
 
 		RenderSystem(const RenderSystem&) = delete;
@@ -24,7 +28,7 @@ namespace lm {
 		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
-		lmDevice& deviceInstance;
+		lmDevice& device;
 
 		std::unique_ptr<lmPipeline> pipeline;
 		VkPipelineLayout pipelineLayout;

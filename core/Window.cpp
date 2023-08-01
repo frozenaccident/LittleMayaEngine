@@ -1,7 +1,5 @@
 #include "Window.h"
 
-#include <stdexcept>
-
 namespace lm {
 
 	lmWindow::lmWindow(int w, int h, std::string name) : width{ w }, height{ h }, windowName{ name } {
@@ -26,11 +24,11 @@ namespace lm {
 
 	void lmWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface) {
 		if (glfwCreateWindowSurface(instance, window, nullptr, surface) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create window surface");
+			LOG_FATAL("Failed to create window surface");
 		}
 	}
 
-	void lm::lmWindow::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+	void lmWindow::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 		auto lmWindow = reinterpret_cast<lm::lmWindow*>(glfwGetWindowUserPointer(window));
 		lmWindow->framebufferResized = true;
 		lmWindow->width = width;
